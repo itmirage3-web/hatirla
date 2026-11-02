@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hatırla</title>
+<meta name="theme-color" content="#F1F2EE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D1210" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Manrope:wght@400..700&display=swap">
+<style>
+  /* Düzen: tek sütun liste, altta sabit mikrofon çubuğu. Tarih ve saat öne çıkar. */
+  :root {
+    --bg: #F1F2EE;
+    --surface: #FFFFFF;
+    --ink: #13201B;
+    --muted: #5E6B65;
+    --line: #DADFD9;
+    --accent: #3D4DF5;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #E3E6FF;
+    --warn: #B83E0B;
+    --warn-soft: #FBE6DB;
+    --ok: #1B7F4B;
+    --shadow: 0 1px 2px rgba(19,32,27,.06), 0 8px 24px rgba(19,32,27,.06);
+    --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --font-body: "Manrope", "Segoe UI", system-ui, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0D1210;
+      --surface: #161E1B;
+      --ink: #E8EEEA;
+      --muted: #8FA098;
+      --line: #26312C;
+      --accent: #8C97FF;
+      --accent-ink: #0D1210;
+      --accent-soft: #232A52;
+      --warn: #FF9A62;
+      --warn-soft: #3A2218;
+      --ok: #6FD39A;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.45 var(--font-body);
+    -webkit-tap-highlight-color: transparent;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  button, input, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .app { max-width: 560px; margin: 0 auto; padding-block: max(20px, env(safe-area-inset-top, 0px)) 200px; }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 8px 0 20px; }
+  h1 { font: 700 34px/1 var(--font-display); letter-spacing: -.02em; margin: 0; }
+  .today { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+  .install { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 600; }
+
+  h2 { font: 600 13px/1 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 26px 0 10px; display: flex; gap: 8px; align-items: center; }
+  h2 .n { background: var(--line); color: var(--ink); border-radius: 999px; padding: 3px 8px; font-size: 11px; letter-spacing: 0; }
+
+  .list { display: flex; flex-direction: column; gap: 10px; }
+  .item { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+  .item.late { border-color: var(--warn); }
+  .check { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--muted); background: transparent; padding: 0; margin-top: 1px; display: grid; place-items: center; }
+  .check:hover { border-color: var(--accent); }
+  .item.done .check { background: var(--ok); border-color: var(--ok); }
+  .item.done .check::after { content: ""; width: 8px; height: 13px; border: solid var(--bg); border-width: 0 2.5px 2.5px 0; transform: rotate(45deg) translate(-1px,-1px); }
+  .body { min-width: 0; }
+  .txt { margin: 0; font-weight: 600; font-size: 17px; line-height: 1.3; overflow-wrap: anywhere; cursor: pointer; }
+  .item.done .txt { text-decoration: line-through; color: var(--muted); font-weight: 500; }
+  .when { margin: 6px 0 0; font: 600 15px/1.2 var(--font-display); font-variant-numeric: tabular-nums; color: var(--accent); }
+  .item.late .when { color: var(--warn); }
+  .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .act { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent; font-size: 13px; font-weight: 600; text-decoration: none; color: var(--ink); }
+  .act.primary { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+  .act.del { color: var(--warn); margin-left: auto; }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+
+  .empty h2 { margin-top: 8px; }
+  .hero { font: 700 30px/1.1 var(--font-display); letter-spacing: -.02em; margin: 8px 0 10px; text-wrap: balance; }
+  .lead { color: var(--muted); margin: 0 0 22px; }
+  .chips { display: flex; flex-direction: column; gap: 8px; }
+  .chip { text-align: left; border: 1px dashed var(--line); background: var(--surface); border-radius: 14px; padding: 12px 14px; font-weight: 600; }
+  .chip small { display: block; color: var(--muted); font-weight: 500; margin-bottom: 2px; }
+  .foot { color: var(--muted); font-size: 13px; margin-top: 28px; }
+
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; padding: 36px 16px calc(14px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--bg) 62%, transparent); display: flex; flex-direction: column; align-items: center; gap: 10px; pointer-events: none; }
+  .dock > * { pointer-events: auto; }
+  .heard { max-width: 520px; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 10px 14px; font-size: 15px; box-shadow: var(--shadow); text-align: center; }
+  .mic-row { display: flex; align-items: center; justify-content: center; gap: 22px; width: 100%; max-width: 520px; }
+  .mic { width: 84px; height: 84px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; box-shadow: 0 10px 28px rgba(61,77,245,.35); transition: transform .15s; }
+  .mic:active { transform: scale(.95); }
+  .mic svg { width: 36px; height: 36px; }
+  .mic.on { animation: pulse 1.4s ease-out infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 var(--accent-soft), 0 0 0 0 var(--accent); } 70% { box-shadow: 0 0 0 26px transparent, 0 0 0 10px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+  .side { width: 64px; display: flex; justify-content: center; }
+  .pill { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; min-height: 44px; padding: 0 16px; font-weight: 600; font-size: 14px; }
+  .hint { margin: 0; font-size: 12px; color: var(--muted); }
+
+  .scrim { position: fixed; inset: 0; background: rgba(5,8,7,.5); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+  .sheet { width: 100%; max-width: 560px; background: var(--surface); border-radius: 24px 24px 0 0; padding: 20px 18px calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; max-height: 92vh; overflow: auto; }
+  .sheet h3 { margin: 0; font: 700 20px/1.1 var(--font-display); }
+  .heard-line { margin: -6px 0 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+  label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 6px; }
+  textarea, input[type=datetime-local] { width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px; font-size: 17px; }
+  textarea { min-height: 84px; resize: vertical; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .warn-line { margin: 0; color: var(--warn); font-size: 13px; font-weight: 600; }
+  .btns { display: flex; gap: 10px; }
+  .btn { flex: 1; min-height: 50px; border-radius: 14px; border: 1px solid var(--line); background: transparent; font-weight: 700; font-size: 16px; }
+  .btn.main { background: var(--accent); color: var(--accent-ink); border-color: transparent; flex: 2; }
+
+  .ring { position: fixed; inset: 0; z-index: 40; background: var(--accent); color: var(--accent-ink); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 18px; padding: 24px; text-align: center; }
+  .ring .big { font: 700 64px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+  .ring .what { font: 600 26px/1.25 var(--font-display); max-width: 480px; overflow-wrap: anywhere; text-wrap: balance; }
+  .ring .btn { background: var(--accent-ink); color: var(--accent); border: 0; max-width: 320px; width: 100%; flex: none; }
+  .ring .btn.alt { background: transparent; color: var(--accent-ink); border: 2px solid currentColor; }
+  .ring-label { letter-spacing: .12em; text-transform: uppercase; font-weight: 700; font-size: 13px; opacity: .85; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .3; } }
+
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(150px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: 14px; z-index: 30; max-width: 90vw; text-align: center; }
+
+  @media (prefers-reduced-motion: reduce) { .mic.on, .ring-label { animation: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Hatırla</h1>
+      <p class="today" id="today"></p>
+    </div>
+    <button class="install" id="install" hidden>Ana ekrana ekle</button>
+  </header>
+  <main id="list"></main>
+</div>
+
+<div class="dock">
+  <div class="heard" id="heard" hidden></div>
+  <div class="mic-row">
+    <div class="side"></div>
+    <button class="mic" id="mic" aria-label="Sesle not ekle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11.5a7 7 0 0 0 14 0M12 18.5V22M8.5 22h7"/></svg>
+    </button>
+    <div class="side"><button class="pill" id="typeBtn">Yaz</button></div>
+  </div>
+  <p class="hint" id="hint">Dokun ve konuş</p>
+</div>
+
+<div class="scrim" id="sheet" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="sheetTitle">
+    <h3 id="sheetTitle">Yeni hatırlatma</h3>
+    <p class="heard-line" id="dHeard" hidden></p>
+    <div>
+      <label for="dText">Not</label>
+      <textarea id="dText" placeholder="Ne hatırlatayım?"></textarea>
+    </div>
+    <div>
+      <label for="dWhen">Ne zaman</label>
+      <input type="datetime-local" id="dWhen">
+      <p class="warn-line" id="dWarn" hidden>Bu saat geçmiş görünüyor.</p>
+    </div>
+    <div class="row">
+      <button class="act" id="q1h" type="button">1 saat sonra</button>
+      <button class="act" id="qTom" type="button">Yarın 09:00</button>
+      <button class="act" id="qNone" type="button">Zamansız not</button>
+    </div>
+    <div class="btns">
+      <button class="btn" id="dCancel" type="button">Vazgeç</button>
+      <button class="btn main" id="dSave" type="button">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<div class="ring" id="ring" hidden role="alertdialog" aria-live="assertive">
+  <div class="ring-label">Hatırlatma</div>
+  <div class="big" id="ringTime"></div>
+  <div class="what" id="ringText"></div>
+  <button class="btn" id="ringOk" type="button">Tamam</button>
+  <button class="btn alt" id="ringSnooze" type="button">10 dk ertele</button>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="parser.js"></script>
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var KEY = 'hatirla.v1';
+  var items = [];
+  try { items = JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { items = []; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(items)); } catch (e) {} syncQ(); }
+
+  /* ---------- Android (Capacitor) ---------- */
+  var CAP = window.Capacitor;
+  var NATIVE = !!(CAP && CAP.isNativePlatform && CAP.isNativePlatform());
+  var LN = NATIVE && CAP.Plugins ? CAP.Plugins.LocalNotifications : null;
+  var SRN = NATIVE && CAP.Plugins ? CAP.Plugins.SpeechRecognition : null;
+  var chReady = null, syncChain = Promise.resolve(), permAsked = false;
+  function nid(it) { var h = 0; for (var i = 0; i < it.id.length; i++) { h = (h * 31 + it.id.charCodeAt(i)) | 0; } return Math.abs(h) % 2147483000 + 1; }
+  function onNotifAction(ev) {
+    var id = ev && ev.notification && ev.notification.extra && ev.notification.extra.id;
+    var it = items.filter(function (x) { return x.id === id; })[0];
+    if (!it) return;
+    if (ev.actionId === 'done') { it.done = true; it.doneAt = Date.now(); }
+    else if (ev.actionId === 'snooze') { it.due = new Date(Date.now() + 600000).toISOString(); }
+    else return;
+    save(); if (typeof render === 'function') render();
+  }
+  function syncQ() { if (LN) syncChain = syncChain.then(syncNative).catch(function () {}); }
+  async function syncNative() {
+    if (!chReady) {
+      chReady = (async function () {
+        await LN.createChannel({ id: 'hatirla-alarm', name: 'Hatırlatmalar', description: 'Zamanı gelen hatırlatmalar', importance: 5, visibility: 1, vibration: true, sound: 'alarm.wav' });
+        await LN.registerActionTypes({ types: [{ id: 'REMINDER', actions: [{ id: 'done', title: 'Tamam' }, { id: 'snooze', title: '10 dk ertele' }] }] });
+        await LN.addListener('localNotificationActionPerformed', onNotifAction);
+      })();
+    }
+    await chReady;
+    var pend = await LN.getPending();
+    if (pend.notifications && pend.notifications.length) {
+      await LN.cancel({ notifications: pend.notifications.map(function (n) { return { id: n.id }; }) });
+    }
+    var now = Date.now();
+    var list = items.filter(function (i) { return i.due && !i.done && new Date(i.due).getTime() > now; }).map(function (i) {
+      return { id: nid(i), title: 'Hatırlatma · ' + hhmm(new Date(i.due)), body: i.text, channelId: 'hatirla-alarm',
+        schedule: { at: new Date(i.due), allowWhileIdle: true }, actionTypeId: 'REMINDER', extra: { id: i.id } };
+    });
+    if (!list.length) return;
+    var perm = await LN.checkPermissions();
+    if (perm.display !== 'granted') {
+      perm = await LN.requestPermissions();
+      if (perm.display !== 'granted') { if (!permAsked) { permAsked = true; toast('Bildirim izni kapalı, hatırlatmalar çalmaz. Telefon ayarlarından aç.'); } return; }
+    }
+    await LN.schedule({ notifications: list });
+  }
+
+  var pad = function (n) { return String(n).padStart(2, '0'); };
+  var hhmm = function (d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+  var toLocalInput = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + hhmm(d); };
+  var DAYN = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+  var MONS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+  var MONL = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+  function dayLabel(d) {
+    var b = new Date(); b.setHours(0, 0, 0, 0);
+    var x = new Date(d); x.setHours(0, 0, 0, 0);
+    var diff = Math.round((x - b) / 864e5);
+    if (diff === 0) return 'Bugün';
+    if (diff === 1) return 'Yarın';
+    if (diff === -1) return 'Dün';
+    if (diff > 1 && diff < 7) return DAYN[d.getDay()];
+    return d.getDate() + ' ' + MONS[d.getMonth()];
+  }
+  function whenText(it) {
+    var d = new Date(it.due);
+    return dayLabel(d) + ' · ' + hhmm(d);
+  }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  /* ---------- Telefon alarmı ve takvim bağlantıları ---------- */
+  function alarmUrl(it) {
+    var d = new Date(it.due);
+    return 'intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR=' + d.getHours() +
+      ';i.android.intent.extra.alarm.MINUTES=' + d.getMinutes() +
+      ';S.android.intent.extra.alarm.MESSAGE=' + encodeURIComponent(it.text) +
+      ';B.android.intent.extra.alarm.SKIP_UI=false;end';
+  }
+  function calUrl(it) {
+    var s = new Date(it.due), e = new Date(s.getTime() + 30 * 60000);
+    var f = function (d) { return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + '00'; };
+    return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(it.text) + '&dates=' + f(s) + '/' + f(e);
+  }
+
+  /* ---------- Liste ---------- */
+  function itemEl(it) {
+    var now = Date.now();
+    var late = !it.done && it.due && new Date(it.due).getTime() < now;
+    var a = el('article', 'item' + (it.done ? ' done' : '') + (late ? ' late' : ''));
+    var chk = el('button', 'check'); chk.setAttribute('aria-label', it.done ? 'Geri al' : 'Tamamla');
+    chk.addEventListener('click', function () {
+      it.done = !it.done; it.doneAt = it.done ? Date.now() : null; save(); render();
+    });
+    var body = el('div', 'body');
+    var t = el('p', 'txt', it.text);
+    t.addEventListener('click', function () { openDraft({ id: it.id, text: it.text, due: it.due ? new Date(it.due) : null }); });
+    body.append(t);
+    if (it.due) body.append(el('p', 'when', (late ? 'Gecikti · ' : '') + whenText(it)));
+    var acts = el('div', 'acts');
+    if (!NATIVE && !it.done && it.due && !late) {
+      var ms = new Date(it.due).getTime() - now;
+      if (ms < 24 * 3600 * 1000) {
+        var al = el('a', 'act primary', 'Telefon alarmı kur'); al.href = alarmUrl(it); acts.append(al);
+      }
+      var cal = el('a', 'act', 'Takvime ekle'); cal.href = calUrl(it); cal.target = '_blank'; cal.rel = 'noopener'; acts.append(cal);
+    }
+    var del = el('button', 'act del', 'Sil');
+    del.addEventListener('click', function () {
+      items = items.filter(function (x) { return x.id !== it.id; }); save(); render(); toast('Silindi');
+    });
+    acts.append(del);
+    body.append(acts);
+    a.append(chk, body);
+    return a;
+  }
+  function section(parent, title, arr, collapsed) {
+    if (!arr.length) return;
+    var wrap = collapsed ? el('details') : el('section');
+    var h = el(collapsed ? 'summary' : 'div');
+    var h2 = el('h2', null, title); h2.append(el('span', 'n', String(arr.length)));
+    h.append(h2); wrap.append(h);
+    var list = el('div', 'list'); arr.forEach(function (it) { list.append(itemEl(it)); });
+    wrap.append(list); parent.append(wrap);
+  }
+  var EXAMPLES = [
+    ['Senin örneğin', 'Yarın saat 9 için Burak ile görüş ve Atmaanla ekranları kontrol'],
+    ['Haftanın günü', 'Cuma 14:30 sunucu odasını kontrol et'],
+    ['Süre ile', '2 saat sonra kameraları kontrol et']
+  ];
+  function render() {
+    var list = $('#list'); list.textContent = '';
+    var up = items.filter(function (i) { return !i.done && i.due; }).sort(function (a, b) { return new Date(a.due) - new Date(b.due); });
+    var notes = items.filter(function (i) { return !i.done && !i.due; }).sort(function (a, b) { return b.created - a.created; });
+    var dn = items.filter(function (i) { return i.done; }).sort(function (a, b) { return (b.doneAt || 0) - (a.doneAt || 0); });
+    if (!items.length) {
+      var e = el('div', 'empty');
+      e.append(el('p', 'hero', 'Söyle, hatırlatsın.'));
+      e.append(el('p', 'lead', 'Mikrofon tuşuna bas ve konuş. Notu ve zamanı ayırırım, kaydetmeden önce sen kontrol edersin.'));
+      var chips = el('div', 'chips');
+      EXAMPLES.forEach(function (ex) {
+        var c = el('button', 'chip'); c.append(el('small', null, ex[0]), document.createTextNode(ex[1]));
+        c.addEventListener('click', function () { handleText(ex[1]); });
+        chips.append(c);
+      });
+      e.append(chips);
+      list.append(e);
+      return;
+    }
+    section(list, 'Sıradakiler', up);
+    section(list, 'Notlar', notes);
+    section(list, 'Tamamlananlar', dn, true);
+    list.append(el('p', 'foot', NATIVE
+      ? 'Hatırlatmalar uygulama kapalıyken de çalar. Bildirimden “Tamam” veya “10 dk ertele” seçebilirsin.'
+      : 'Uygulama kapalıyken çalması için bir hatırlatmadaki “Telefon alarmı kur” tuşuna bas. Alarm telefonun saat uygulamasına eklenir.'));
+  }
+
+  /* ---------- Taslak (kaydetmeden önce onay) ---------- */
+  var draft = null;
+  function openDraft(o) {
+    draft = { id: o.id || null };
+    $('#sheetTitle').textContent = o.id ? 'Düzenle' : 'Yeni hatırlatma';
+    $('#dText').value = o.text || '';
+    $('#dWhen').value = o.due ? toLocalInput(o.due) : '';
+    var hl = $('#dHeard');
+    if (o.heard) { hl.textContent = 'Duyduğum: ' + o.heard; hl.hidden = false; } else hl.hidden = true;
+    checkWarn();
+    $('#sheet').hidden = false;
+    setTimeout(function () { if (!o.text) $('#dText').focus(); }, 50);
+  }
+  function closeDraft() { $('#sheet').hidden = true; draft = null; }
+  function checkWarn() {
+    var v = $('#dWhen').value;
+    $('#dWarn').hidden = !(v && new Date(v).getTime() < Date.now());
+  }
+  $('#dWhen').addEventListener('input', checkWarn);
+  $('#q1h').addEventListener('click', function () { $('#dWhen').value = toLocalInput(new Date(Date.now() + 3600000)); checkWarn(); });
+  $('#qTom').addEventListener('click', function () { var d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); $('#dWhen').value = toLocalInput(d); checkWarn(); });
+  $('#qNone').addEventListener('click', function () { $('#dWhen').value = ''; checkWarn(); });
+  $('#dCancel').addEventListener('click', closeDraft);
+  $('#sheet').addEventListener('click', function (e) { if (e.target === $('#sheet')) closeDraft(); });
+  $('#dSave').addEventListener('click', function () {
+    var text = $('#dText').value.trim();
+    if (!text) { toast('Önce bir not yaz'); $('#dText').focus(); return; }
+    var v = $('#dWhen').value;
+    var due = v ? new Date(v).toISOString() : null;
+    if (draft && draft.id) {
+      var it = items.filter(function (x) { return x.id === draft.id; })[0];
+      if (it) { if (it.due !== due) it.fired = false; it.text = text; it.due = due; }
+    } else {
+      items.push({ id: uid(), text: text, due: due, done: false, fired: false, created: Date.now() });
+    }
+    save(); closeDraft(); render();
+    toast(due ? 'Kaydedildi · ' + whenText({ due: due }) : 'Not kaydedildi');
+    if (due && 'Notification' in window && Notification.permission === 'default') {
+      try { Notification.requestPermission(); } catch (e) {}
+    }
+  });
+
+  function handleText(txt) {
+    var p = window.parseTR(txt);
+    openDraft({ text: p.title || txt, due: p.due, heard: txt });
+  }
+  $('#typeBtn').addEventListener('click', function () { openDraft({}); });
+
+  /* ---------- Ses tanıma ---------- */
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var rec = null, listening = false;
+  function setHeard(t) { var h = $('#heard'); if (t) { h.textContent = t; h.hidden = false; } else { h.hidden = true; } }
+  function setListening(on) {
+    listening = on;
+    $('#mic').classList.toggle('on', on);
+    $('#hint').textContent = on ? 'Dinliyorum… bitince tekrar dokun' : 'Dokun ve konuş';
+  }
+  function startListen() {
+    if (!SR) { toast('Bu tarayıcıda sesli komut yok. Klavyedeki mikrofonu kullan.'); openDraft({}); return; }
+    var finalT = '', last = '';
+    rec = new SR();
+    rec.lang = 'tr-TR'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+    rec.onresult = function (e) {
+      var interim = '';
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        var r = e.results[i];
+        if (r.isFinal) finalT += r[0].transcript + ' '; else interim += r[0].transcript;
+      }
+      last = (finalT + interim).trim();
+      setHeard(last);
+    };
+    rec.onerror = function (e) {
+      var msg = {
+        'not-allowed': 'Mikrofon izni kapalı. Adres çubuğundaki ayarlardan izin ver.',
+        'service-not-allowed': 'Mikrofon izni kapalı. Adres çubuğundaki ayarlardan izin ver.',
+        'no-speech': 'Ses duymadım, tekrar dene.',
+        'audio-capture': 'Mikrofon bulunamadı.',
+        'network': 'Sesli komut için internet gerekli.'
+      }[e.error];
+      if (msg) toast(msg);
+    };
+    rec.onend = function () {
+      setListening(false); setHeard('');
+      var txt = (finalT || last).trim();
+      if (txt) handleText(txt);
+    };
+    try { rec.start(); setListening(true); setHeard(''); } catch (e) { setListening(false); }
+  }
+  var nLast = '', nBound = false;
+  async function startNative() {
+    try {
+      var av = await SRN.available();
+      if (!av.available) { toast('Bu telefonda ses tanıma yok. Klavyedeki mikrofonu kullan.'); openDraft({}); return; }
+      var perm = await SRN.checkPermissions();
+      if (perm.speechRecognition !== 'granted') {
+        perm = await SRN.requestPermissions();
+        if (perm.speechRecognition !== 'granted') { toast('Mikrofon izni gerekli. Telefon ayarlarından uygulamaya izin ver.'); return; }
+      }
+      nLast = '';
+      if (!nBound) {
+        nBound = true;
+        await SRN.addListener('partialResults', function (d) {
+          if (d && d.matches && d.matches.length) { nLast = d.matches[0]; setHeard(nLast); }
+        });
+        await SRN.addListener('listeningState', function (d) {
+          if (d && d.status === 'stopped') {
+            setListening(false); setHeard('');
+            var t = nLast.trim(); nLast = '';
+            if (t) handleText(t);
+          }
+        });
+      }
+      setListening(true);
+      await SRN.start({ language: 'tr-TR', maxResults: 1, partialResults: true, popup: false });
+    } catch (e) {
+      setListening(false);
+      toast('Ses tanıma başlatılamadı. Google ses servisi kurulu mu?');
+    }
+  }
+  $('#mic').addEventListener('click', function () {
+    unlock();
+    if (SRN) {
+      if (listening) { SRN.stop().catch(function () {}); return; }
+      startNative(); return;
+    }
+    if (listening && rec) { rec.stop(); return; }
+    startListen();
+  });
+
+  /* ---------- Çalan hatırlatma ---------- */
+  var ac = null, beepT = null, ringing = null;
+  function unlock() {
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch (e) {}
+  }
+  addEventListener('pointerdown', unlock, { passive: true });
+  function beep() {
+    if (!ac) return;
+    var t = ac.currentTime;
+    [0, 0.25].forEach(function (o, i) {
+      var os = ac.createOscillator(), g = ac.createGain();
+      os.type = 'sine'; os.frequency.value = i ? 1040 : 880;
+      g.gain.setValueAtTime(0, t + o);
+      g.gain.linearRampToValueAtTime(0.3, t + o + 0.02);
+      g.gain.linearRampToValueAtTime(0, t + o + 0.2);
+      os.connect(g); g.connect(ac.destination);
+      os.start(t + o); os.stop(t + o + 0.22);
+    });
+  }
+  function pulse() { beep(); if (navigator.vibrate) navigator.vibrate([300, 150, 300]); }
+  function ringFor(it) {
+    ringing = it; it.fired = true; save();
+    $('#ringTime').textContent = hhmm(new Date(it.due));
+    $('#ringText').textContent = it.text;
+    $('#ring').hidden = false;
+    pulse(); beepT = setInterval(pulse, 1500);
+    if ('Notification' in window && Notification.permission === 'granted' && navigator.serviceWorker) {
+      navigator.serviceWorker.ready.then(function (r) {
+        r.showNotification('Hatırlatma · ' + hhmm(new Date(it.due)), { body: it.text, tag: it.id, requireInteraction: true, vibrate: [300, 150, 300], icon: 'icon-192.png' });
+      }).catch(function () {});
+    }
+  }
+  function stopRing() { clearInterval(beepT); beepT = null; $('#ring').hidden = true; ringing = null; if (navigator.vibrate) navigator.vibrate(0); }
+  $('#ringOk').addEventListener('click', function () { if (ringing) { ringing.done = true; ringing.doneAt = Date.now(); save(); } stopRing(); render(); });
+  $('#ringSnooze').addEventListener('click', function () {
+    if (ringing) { ringing.due = new Date(Date.now() + 10 * 60000).toISOString(); ringing.fired = false; save(); }
+    stopRing(); render(); toast('10 dakika sonra tekrar');
+  });
+  function tick() {
+    if (NATIVE || ringing) return;
+    var now = Date.now();
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      if (it.due && !it.done && !it.fired && new Date(it.due).getTime() <= now) { ringFor(it); render(); break; }
+    }
+  }
+  setInterval(tick, 4000);
+  setInterval(render, 60000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { render(); tick(); } });
+
+  /* ---------- Yardımcılar ---------- */
+  var toastT;
+  function toast(m) { var t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, 3200); }
+
+  var dp = null;
+  addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); dp = e; $('#install').hidden = false; });
+  $('#install').addEventListener('click', function () { if (dp) { dp.prompt(); dp = null; $('#install').hidden = true; } });
+
+  var n = new Date();
+  $('#today').textContent = DAYN[n.getDay()] + ', ' + n.getDate() + ' ' + MONL[n.getMonth()];
+
+  if (!NATIVE && 'serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function () {}); }
+  render(); tick(); syncQ();
+})();
+</script>
+</body>
+</html>

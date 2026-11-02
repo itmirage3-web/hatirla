@@ -1,0 +1,12 @@
+{
+  "appId": "com.itmirage3.hatirla",
+  "appName": "Hatırla",
+  "webDir": "www",
+  "backgroundColor": "#0D1210",
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_hatirla",
+      "iconColor": "#3D4DF5"
+    }
+  }
+}
